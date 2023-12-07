@@ -16,3 +16,11 @@ Follow these steps to get the Mini Trello application up and running on your loc
    ```bash
    git clone https://github.com/haroonfayyaz/mini-trello.git
    cd mini-trello
+
+2. **Install Dependencies:**
+   ```bash
+   npm install
+
+3. **Run the Application:**
+   ```bash
+   npm start
