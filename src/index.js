@@ -5,7 +5,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 
 const client = new ApolloClient({
-  uri: "https://5042-39-63-26-37.ngrok-free.app/graphql",
+  uri: process.env.REACT_APP_BE_URL,
   cache: new InMemoryCache(),
   fetchOptions: {
     mode: "no-cors",

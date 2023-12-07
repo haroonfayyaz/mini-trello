@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from "react";
 import _ from "lodash";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { RenderIf } from "../utils/common";
@@ -6,18 +5,21 @@ import { useQuery, gql, useMutation } from "@apollo/client";
 import ButtonWithIcon from "./ButtonWithIcon";
 import InputForm from "./InputForm";
 import List from "./List";
+import ListContext from "../contexts/ListContext";
+import React, { useContext, useEffect, useState } from "react";
+import SpinnerContext from "../contexts/SpinnerContext";
 
 const textColors = [
-  "title-red-500",
-  "title-blue-500",
-  "title-green-500",
-  "title-yellow-500",
-  "title-indigo-500",
-  "title-purple-500",
-  "title-pink-500",
-  "title-orange-500",
-  "title-teal-500",
-  "title-cyan-500",
+  "text-red-500",
+  "text-blue-500",
+  "text-green-500",
+  "text-yellow-500",
+  "text-indigo-500",
+  "text-purple-500",
+  "text-pink-500",
+  "text-orange-500",
+  "text-teal-500",
+  "text-cyan-500",
 ];
 
 const GET_LISTS = gql`
@@ -28,6 +30,7 @@ const GET_LISTS = gql`
       cards {
         id
         title
+        timestamp
       }
     }
   }
@@ -44,150 +47,120 @@ const CREATE_LIST = gql`
   }
 `;
 
-const TaskContext = React.createContext();
+const MANAGE_CARD_IN_LIST = gql`
+  mutation ManageCardInList(
+    $sourceListId: ID!
+    $destinationListId: ID!
+    $cardId: ID!
+  ) {
+    manageCardInList(
+      sourceListId: $sourceListId
+      destinationListId: $destinationListId
+      cardId: $cardId
+    ) {
+      sourceList {
+        id
+        name
+      }
+      destinationList {
+        id
+        name
+      }
+    }
+  }
+`;
 
 const TaskBoard = () => {
-  // const { data, refetch } = useQuery(GET_LISTS);
-  const [createList, { data: createdList }] = useMutation(CREATE_LIST);
-  // const [lists, setLists] = useState([]);
-  const [lists, setLists] = useState([
-    {
-      id: 1,
-      name: "completed",
-      textColor: _.sample(textColors),
-      cards: [
-        {
-          id: 6,
-          title: "Deploy application to production",
-        },
-        {
-          id: 7,
-          title: "Create onboarding tutorial",
-        },
-        {
-          id: 12,
-          title: "Conduct user testing sessions",
-        },
-      ],
-    },
-    {
-      id: 2,
-      name: "inProgress",
-      textColor: _.sample(textColors),
-      cards: [
-        {
-          id: 4,
-          title: "Fix bug in data validation",
-        },
-        {
-          id: 5,
-          title: "Write unit tests for components",
-        },
-        {
-          id: 11,
-          title: "Review and optimize database queries",
-        },
-      ],
-    },
-    {
-      id: 3,
-      name: "new",
-      textColor: _.sample(textColors),
-      cards: [
-        {
-          id: 9,
-          title: "Define project milestones",
-        },
-        {
-          id: 13,
-          title: "Draft marketing strategy for product launch",
-        },
-      ],
-    },
-    {
-      id: 4,
-      name: "planned",
-      textColor: _.sample(textColors),
-      cards: [
-        {
-          id: 8,
-          title: "Explore new design trends",
-        },
-        {
-          id: 10,
-          title: "Collaborate with team on feature planning",
-        },
-        {
-          id: 14,
-          title: "Research emerging technologies for future updates",
-        },
-      ],
-    },
-    {
-      id: 5,
-      name: "todo",
-      textColor: _.sample(textColors),
-      cards: [
-        {
-          id: 1,
-          title: "Implement user authentication",
-        },
-        {
-          id: 2,
-          title: "Design homepage layout",
-        },
-        {
-          id: 3,
-          title: "Refactor backend API calls",
-        },
-      ],
-    },
-  ]);
-  const [success, setSuccess] = useState("");
-
+  const [lists, setLists] = useState([]);
   const [showNewListInput, setShowNewListInput] = useState(false);
   const [newListName, setNewListName] = useState("");
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const { data } = useQuery(GET_LISTS);
+  const [createList] = useMutation(CREATE_LIST);
+  const [manageCardInList] = useMutation(MANAGE_CARD_IN_LIST);
 
-    setSuccess("");
-    createList({ variables: { name: newListName } });
+  const setShowSpinner = useContext(SpinnerContext);
+
+  useEffect(() => {
+    setShowSpinner(true);
+    if (!data) return;
+    setShowSpinner(false);
+
+    setLists(
+      data.lists.map((list) => ({ ...list, textColor: _.sample(textColors) })),
+    );
+  }, [data, setShowSpinner]);
+
+  const handleDrop = async ({ card, dragListId }, dropListId) => {
+    setShowSpinner(true);
+    const {
+      data: {
+        manageCardInList: {
+          sourceList: { id: sourceListId },
+          destinationList: { id: destinationListId },
+        },
+      },
+    } = await manageCardInList({
+      variables: {
+        sourceListId: dragListId,
+        destinationListId: dropListId,
+        cardId: card.id,
+      },
+    });
+    setShowSpinner(false);
+
+    if (sourceListId && destinationListId) {
+      const updatedLists = _.cloneDeep(lists);
+      const indexToUpdate = _.findIndex(updatedLists, ["id", dragListId]);
+      updatedLists[indexToUpdate].cards = updatedLists[
+        indexToUpdate
+      ].cards.filter((c) => c.id !== card.id);
+      updatedLists[_.findIndex(updatedLists, ["id", dropListId])].cards.push(
+        card,
+      );
+      setLists(updatedLists);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!_.some(lists, ({ name }) => name === newListName)) {
+      try {
+        setShowSpinner(true);
+        const {
+          data: {
+            createList: { list },
+          },
+        } = await createList({ variables: { name: newListName } });
+        setShowSpinner(false);
+
+        if (list.id) {
+          setLists([
+            ...lists,
+            {
+              ...list,
+              textColor: _.sample(textColors),
+              cards: [],
+            },
+          ]);
+        }
+      } catch (error) {}
+    }
     setNewListName("");
     setShowNewListInput(false);
   };
 
-  // useEffect(() => {
-  //   if (!data) return;
-
-  //   // setLists(
-  //   //   data.lists.map((list) => ({ ...list, textColor: _.sample(textColors) })),
-  //   // );
-  // }, [data]);
-
-  useEffect(() => {
-    if (!success) return;
-
-    // refetch();
-  }, [success]);
-
-  // useEffect(() => {
-  //   if (!createdList) return;
-
-  //   refetch();
-  // }, [createdList]);
-
   return (
     <div className="flex h-full items-start justify-start overflow-scroll">
       <div className="flex flex-col space-y-4 p-4 md:flex-row md:space-x-4 md:space-y-0">
-        {lists.map((list, index) => (
-          <TaskContext.Provider key={"__list__" + index} value={setSuccess}>
-            <List {...list} setLists={setLists} setSuccess={setSuccess} />
-          </TaskContext.Provider>
+        {lists.map((list) => (
+          <ListContext.Provider key={list.id} value={setLists}>
+            <List onDrop={handleDrop} list={list} />
+          </ListContext.Provider>
         ))}
-        <div className="h-fit min-w-[300px] rounded-md bg-slate-200 bg-opacity-90 p-4 shadow-md">
+        <div className="h-fit min-w-[90vw] rounded-md bg-slate-200 bg-opacity-90 p-4 shadow-md md:min-w-[20vw]">
           <div className="inline-flex w-full items-center justify-between">
-            <h2 className="title-2xl font-semibold">Add a list</h2>
+            <h2 className="text-2xl font-semibold">Add a list</h2>
             <ButtonWithIcon
               color={"bg-green-500"}
               hoverColor={"bg-green-600"}
@@ -214,4 +187,4 @@ const TaskBoard = () => {
   );
 };
 
-export { TaskBoard, TaskContext };
+export default TaskBoard;
