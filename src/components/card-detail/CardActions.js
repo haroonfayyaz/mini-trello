@@ -22,8 +22,6 @@ const actionItems = [
   },
 ];
 
-const menuActions = ["Move", "Copy", "Make Template", "Delete"];
-
 const ActionButton = ({ icon: Icon, label, imgSrc }) => (
   <button className="flex w-full items-center rounded p-2 text-gray-700 hover:bg-gray-200">
     {imgSrc ? (

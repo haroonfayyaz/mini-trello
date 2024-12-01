@@ -1,5 +1,4 @@
-import React, { useContext, useEffect, useState, memo } from "react";
-import PropTypes from "prop-types";
+import React, { useContext, useEffect, memo } from "react";
 import { Calendar } from "lucide-react";
 import { useQuery } from "@apollo/client";
 import { GET_CARD } from "../../graphql/queries/card";
