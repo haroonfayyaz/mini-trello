@@ -1,7 +1,8 @@
 import _ from "lodash";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { RenderIf } from "../utils/common";
-import { useQuery, gql, useMutation } from "@apollo/client";
+import { useQuery, useMutation } from "@apollo/client";
+import { GET_LISTS, CREATE_LIST, MANAGE_CARD_IN_LIST } from "../graphql/queries/list";
 import ButtonWithIcon from "./ButtonWithIcon";
 import InputForm from "./InputForm";
 import List from "./List";
@@ -21,54 +22,6 @@ const textColors = [
   "text-teal-500",
   "text-cyan-500",
 ];
-
-const GET_LISTS = gql`
-  query {
-    lists {
-      id
-      name
-      cards {
-        id
-        title
-        timestamp
-      }
-    }
-  }
-`;
-
-const CREATE_LIST = gql`
-  mutation CreateList($name: String!) {
-    createList(name: $name) {
-      list {
-        id
-        name
-      }
-    }
-  }
-`;
-
-const MANAGE_CARD_IN_LIST = gql`
-  mutation ManageCardInList(
-    $sourceListId: ID!
-    $destinationListId: ID!
-    $cardId: ID!
-  ) {
-    manageCardInList(
-      sourceListId: $sourceListId
-      destinationListId: $destinationListId
-      cardId: $cardId
-    ) {
-      sourceList {
-        id
-        name
-      }
-      destinationList {
-        id
-        name
-      }
-    }
-  }
-`;
 
 const TaskBoard = () => {
   const [lists, setLists] = useState([]);
@@ -151,19 +104,19 @@ const TaskBoard = () => {
   };
 
   return (
-    <div className="flex h-full items-start justify-start overflow-scroll">
-      <div className="flex flex-col space-y-4 p-4 md:flex-row md:space-x-4 md:space-y-0">
+    <div className="flex h-full items-start justify-start overflow-x-auto overflow-y-hidden bg-gradient-to-r from-blue-500 to-purple-600 p-6">
+      <div className="flex space-x-4">
         {lists.map((list) => (
           <ListContext.Provider key={list.id} value={setLists}>
             <List onDrop={handleDrop} list={list} />
           </ListContext.Provider>
         ))}
-        <div className="h-fit min-w-[90vw] rounded-md bg-slate-200 bg-opacity-90 p-4 shadow-md md:min-w-[20vw]">
+        <div className="h-fit min-w-[272px] rounded-xl bg-white/20 p-3 backdrop-blur-sm transition-all hover:bg-white/30">
           <div className="inline-flex w-full items-center justify-between">
-            <h2 className="text-2xl font-semibold">Add a list</h2>
+            <h2 className="text-lg font-medium text-white">Add another list</h2>
             <ButtonWithIcon
-              color={"bg-green-500"}
-              hoverColor={"bg-green-600"}
+              color={"bg-white/10"}
+              hoverColor={"bg-white/20"}
               title={"Create List"}
               onClick={() => setShowNewListInput(true)}
               icon={faPlus}
@@ -172,13 +125,14 @@ const TaskBoard = () => {
           <RenderIf isTrue={showNewListInput}>
             <InputForm
               onSubmit={(e) => handleSubmit(e)}
-              placeholder="Enter list name"
+              placeholder="Enter list title..."
               onBlur={() => {
                 setShowNewListInput(false);
                 setNewListName("");
               }}
               onChange={(e) => setNewListName(e.target.value)}
               value={newListName}
+              className="mt-2"
             />
           </RenderIf>
         </div>

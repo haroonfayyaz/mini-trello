@@ -1,52 +1,19 @@
 import _ from "lodash";
 import { faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { gql, useMutation } from "@apollo/client";
+import { useMutation } from "@apollo/client";
+import { ADD_CARD_TO_LIST, DELETE_LIST } from "../graphql/queries/list";
+import { CREATE_CARD } from "../graphql/queries/card";
 import { ItemTypes } from "./Constants";
 import { RenderIf } from "../utils/common";
 import { useDrop } from "react-dnd";
-import {
-  faHandPointDown,
-  faPlus,
-  faTrash,
-} from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import ButtonWithIcon from "./ButtonWithIcon";
 import Card from "./Card";
 import InputForm from "./InputForm";
 import ListContext from "../contexts/ListContext";
 import React, { useContext, useState } from "react";
 import SpinnerContext from "../contexts/SpinnerContext";
-
-const CREATE_CARD = gql`
-  mutation CreateCard($title: String!) {
-    createCard(title: $title) {
-      card {
-        id
-        title
-        timestamp
-      }
-    }
-  }
-`;
-
-const ADD_CARD_TO_LIST = gql`
-  mutation AddCardToList($listId: ID!, $cardId: ID!) {
-    addCardToList(listId: $listId, cardId: $cardId) {
-      list {
-        id
-        name
-      }
-    }
-  }
-`;
-
-const DELETE_LIST = gql`
-  mutation DeleteList($id: ID!) {
-    deleteList(id: $id) {
-      success
-    }
-  }
-`;
 
 export default function List({ onDrop, list }) {
   const [showNewTaskInput, setShowNewTaskInput] = useState(false);
@@ -120,51 +87,47 @@ export default function List({ onDrop, list }) {
 
   return (
     <div ref={dropRef} className={`${isOver && "animate-pulse"}`}>
-      <div className="flex min-w-[90vw] animate-fade flex-col rounded-md bg-slate-200 bg-opacity-90 p-4 shadow-md md:min-w-[20vw]">
-        <div className="mb-4 flex flex-row items-center justify-between">
-          <h2
-            className={`inline-flex items-center space-x-2 text-2xl font-semibold ${list.textColor}`}
-          >
-            <span>{`${_.startCase(list.name)} (${_.size(list.cards)})`}</span>
+      <div className="flex h-fit w-[272px] flex-col rounded-xl bg-gray-100 p-3 shadow-lg">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className={`text-lg font-medium ${list.textColor}`}>
+            {`${_.startCase(list.name)} (${_.size(list.cards)})`}
             <FontAwesomeIcon
               icon={sortOrder === "asc" ? faArrowUp : faArrowDown}
               title="Sort By Date"
-              className="text-gray-500 hover:cursor-pointer"
+              className="ml-2 text-gray-400 hover:cursor-pointer hover:text-gray-600"
               onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
             />
           </h2>
           <ButtonWithIcon
-            color={"bg-red-500"}
-            hoverColor={"bg-red-600"}
+            color={"bg-red-400"}
+            hoverColor={"bg-red-500"}
             title={"Remove List"}
             icon={faTrash}
             onClick={() => handleDelete(list.id)}
           />
         </div>
-        <ul>
-          {_.orderBy(list.cards, ["timestamp"], [sortOrder]).map((card) => (
-            <Card key={card.id} card={card} listId={list.id} />
-          ))}
-        </ul>
+        <div className="custom-scrollbar max-h-[calc(100vh-200px)] overflow-y-auto">
+          <ul className="space-y-2">
+            {_.orderBy(list.cards, ["timestamp"], [sortOrder]).map((card) => (
+              <Card key={card.id} card={card} listId={list.id} />
+            ))}
+          </ul>
+        </div>
         <RenderIf
           isTrue={showNewTaskInput}
           fallback={
-            <ButtonWithIcon
-              color={"bg-green-500"}
-              hoverColor={"bg-green-600"}
-              title={"Create Task"}
+            <button
               onClick={() => setShowNewTaskInput(true)}
-              icon={faPlus}
-            />
+              className="mt-2 flex w-full items-center rounded-lg p-2 text-gray-600 hover:bg-gray-200"
+            >
+              <FontAwesomeIcon icon={faPlus} className="mr-2" />
+              Add a card
+            </button>
           }
         >
-          <h2 className="inline-flex items-center justify-center space-x-2 text-base font-semibold">
-            <span>Enter task name</span>{" "}
-            <FontAwesomeIcon icon={faHandPointDown} />
-          </h2>
           <InputForm
             onSubmit={(e) => handleSubmit(e)}
-            placeholder="Enter task name"
+            placeholder="Enter card title..."
             onBlur={() => {
               setShowNewTaskInput(false);
               setNewTaskText("");
