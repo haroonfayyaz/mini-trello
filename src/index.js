@@ -1,15 +1,20 @@
 import "./index.css";
-import { ApolloClient, InMemoryCache, ApolloProvider } from "@apollo/client";
+import {
+  ApolloClient,
+  InMemoryCache,
+  ApolloProvider,
+  HttpLink,
+} from "@apollo/client";
 import App from "./App";
 import React from "react";
 import ReactDOM from "react-dom/client";
 
 const client = new ApolloClient({
-  uri: process.env.REACT_APP_BE_URL + "/graphql",
+  link: new HttpLink({
+    uri: process.env.REACT_APP_BE_URL + "/graphql",
+    credentials: "same-origin"
+  }),
   cache: new InMemoryCache(),
-  fetchOptions: {
-    mode: "no-cors",
-  },
 });
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
